@@ -6,24 +6,32 @@
 ---
 
 ## 📑 Оглавление
-- [Что делает эта инструкция?](#что-делает-эта-инструкция)
-- [Пример конфигурации клиента WireGuard](#пример-конфигурации-клиента-wireguard)
-- [Подготовка к настройке](#подготовка-к-настройке)
-- [Пошаговая настройка](#пошаговая-настройка)
-  - [1. Создание интерфейса WireGuard](#1-создание-интерфейса-wireguard)
-  - [2. Назначение IP-адреса интерфейсу](#2-назначение-ip-адреса-интерфейсу)
-  - [3. Настройка подключения к серверу (peer)](#3-настройка-подключения-к-серверу-peer)
-  - [4. Настройка NAT (маскарадинг)](#4-настройка-nat-маскарадинг)
-  - [5. Добавление маршрутов](#5-добавление-маршрутов)
-  - [6. Перенаправление DNS-запросов](#6-перенаправление-dns-запросов)
-  - [7. Скрипт автоматизации DNS и NAT](#7-скрипт-автоматизации-dns-и-nat)
-  - [8. Настройка планировщика](#8-настройка-планировщика)
-  - [9. Отключение FastTrack](#9-отключение-fasttrack)
-- [Добавление новых подсетей](#добавление-новых-подсетей)
-- [✅ Проверка работы](#проверка-работы)
-- [❓ FAQ](#faq)
-- [🛠️ Troubleshooting](#troubleshooting)
-- [📚 Полезные ссылки](#полезные-ссылки)
+- [🚀 Настройка WireGuard VPN на MikroTik: WinBox и Терминал](#-настройка-wireguard-vpn-на-mikrotik-winbox-и-терминал)
+  - [📑 Оглавление](#-оглавление)
+  - [📝 Что делает эта инструкция?](#-что-делает-эта-инструкция)
+  - [💡 Пример конфигурации клиента WireGuard](#-пример-конфигурации-клиента-wireguard)
+  - [🛠️ Подготовка к настройке](#️-подготовка-к-настройке)
+  - [🧩 Пошаговая настройка](#-пошаговая-настройка)
+    - [1️⃣ Создание интерфейса WireGuard](#1️⃣-создание-интерфейса-wireguard)
+    - [2️⃣ Назначение IP-адреса интерфейсу](#2️⃣-назначение-ip-адреса-интерфейсу)
+    - [3️⃣ Настройка подключения к серверу (peer)](#3️⃣-настройка-подключения-к-серверу-peer)
+    - [4️⃣ Настройка NAT (маскарадинг)](#4️⃣-настройка-nat-маскарадинг)
+    - [5️⃣ Добавление маршрутов](#5️⃣-добавление-маршрутов)
+    - [6️⃣ Перенаправление DNS-запросов](#6️⃣-перенаправление-dns-запросов)
+    - [7️⃣ Скрипт автоматизации DNS и NAT](#7️⃣-скрипт-автоматизации-dns-и-nat)
+    - [8️⃣ Настройка планировщика](#8️⃣-настройка-планировщика)
+    - [9️⃣ Отключение FastTrack](#9️⃣-отключение-fasttrack)
+  - [➕ Добавление новых подсетей](#-добавление-новых-подсетей)
+  - [✅ Проверка работы](#-проверка-работы)
+  - [❓ FAQ](#-faq)
+  - [🛠️ Troubleshooting](#️-troubleshooting)
+    - [1. Проблемы с MTU](#1-проблемы-с-mtu)
+    - [2. Проблемы с DNS](#2-проблемы-с-dns)
+    - [3. Проблемы с маршрутизацией](#3-проблемы-с-маршрутизацией)
+    - [4. Проблемы с ключами](#4-проблемы-с-ключами)
+    - [5. FastTrack не отключён](#5-fasttrack-не-отключён)
+    - [6. Нет связи с сервером WireGuard](#6-нет-связи-с-сервером-wireguard)
+  - [📚 Полезные ссылки](#-полезные-ссылки)
 
 ---
 
@@ -140,7 +148,15 @@ PersistentKeepalive = 15
 
 **Через терминал**:
 ```mikrotik
-/interface wireguard peers add interface=wg-vpn public-key="ПУБЛИЧНЫЙ_КЛЮЧ_СЕРВЕРА" preshared-key="PRESHARED_КЛЮЧ_СЕРВЕРА" endpoint-address=vpn.example.com endpoint-port=51443 allowed-address=172.29.8.0/24,172.30.0.0/15,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/12,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,3.74.0.0/15,34.0.0.0/16,34.1.224.0/19,35.207.0.0/16,35.212.0.0/14,35.217.0.0/18,35.219.224.0/19,54.193.0.0/16,66.22.192.0/18 persistent-keepalive=15s
+/interface wireguard peers add \
+    interface=wg-vpn \
+    public-key="ПУБЛИЧНЫЙ_КЛЮЧ_СЕРВЕРА" \
+    preshared-key="PRESHARED_КЛЮЧ_СЕРВЕРА" \
+    endpoint-address=vpn.example.com \
+    endpoint-port=51443 \
+    allowed-address=172.29.8.0/24,172.30.0.0/15,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/12,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,3.74.0.0/15,34.0.0.0/16,34.1.224.0/19,35.207.0.0/16,35.212.0.0/14,35.217.0.0/18,35.219.224.0/19,54.193.0.0/16,66.22.192.0/18 \
+    persistent-keepalive=15s
+
 ```
 
 - **interface**: Интерфейс WireGuard.
@@ -246,6 +262,7 @@ PersistentKeepalive = 15
 /ip route add dst-address=35.219.224.0/19 gateway=172.29.8.1 distance=1 check-gateway=ping
 /ip route add dst-address=54.193.0.0/16 gateway=172.29.8.1 distance=1 check-gateway=ping
 /ip route add dst-address=66.22.192.0/18 gateway=172.29.8.1 distance=1 check-gateway=ping
+
 ```
 
 - **dst-address**: Подсеть для маршрута.
@@ -272,6 +289,7 @@ PersistentKeepalive = 15
 **Через терминал**:
 ```mikrotik
 /ip firewall mangle add chain=postrouting src-address=192.168.88.0/24 action=add-src-to-address-list address-list=RedirectDNS address-list-timeout=60s out-interface=wg-vpn
+
 ```
 
 - **src-address**: Локальная сеть.
@@ -289,32 +307,59 @@ PersistentKeepalive = 15
    - **Name**: Введите `WG-Monitor`.
    - **Policy**: Установите галочки `read`, `write`, `test`.
    - **Source**: Вставьте код:
-     ```
-     :local iface "wg-vpn"
-     :local isRunning [/interface get $iface running]
+    ```mikrotik
+    :local iface "wg-vpn"
+    :local isRunning [/interface get [find name="wg-vpn"] running]
+    :global wgLastState
 
-     :if ($isRunning) do={
-         /log info "[WG-Monitor] WireGuard is RUNNING — applying rules"
-         /ip dhcp-client set ether1 use-peer-dns=no
-         /ip dns cache flush
-         /ip firewall nat remove [find comment="Redirect to Router"]
-         /ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53,5353,1253 protocol=udp comment="Redirect to Router"
-         /ip dns set servers=172.29.8.1
-     } else={
-         /log info "[WG-Monitor] WireGuard is NOT running — reverting rules"
-         /ip firewall nat remove [find comment="Redirect to Router"]
-         /ip dns set servers=""
-         /ip dhcp-client set ether1 use-peer-dns=yes
-         /ip dns cache flush
-     }
-     ```
+    :if ([:typeof $wgLastState] = "nothing" || $wgLastState != $isRunning) do={
+      :if ($isRunning) do={
+        /log info "[WG-Monitor] WireGuard is RUNNING, applying rules"
+        /ip dhcp-client set [find interface="ether1"] use-peer-dns=no
+        /ip dns cache flush
+        /ip firewall nat remove [find comment="Redirect to Router"]
+        /ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53,5353,1253 protocol=udp comment="Redirect to Router"
+        /ip dns set servers=172.29.8.1
+      } else={
+        /log info "[WG-Monitor] WireGuard is NOT running, reverting rules"
+        /ip firewall nat remove [find comment="Redirect to Router"]
+        /ip dns set servers=""
+        /ip dhcp-client set [find interface="ether1"] use-peer-dns=yes
+        /ip dns cache flush
+      }
+      :set wgLastState $isRunning
+    }
+    ```
 4. Нажмите **OK**.
 5. ![Скриншот: Создание скрипта WG-Monitor в WinBox](https://github.com/user-attachments/assets/267bd173-0c2c-4cbc-b9ba-9ab9a3c14cba)
 
 **Через терминал**:
 ```mikrotik
 /system script
-add name="WG-Monitor" policy=read,write,test source=":local iface \"wg-vpn\"\n:local isRunning [/interface get \$iface running]\n\n:if (\$isRunning) do={\n    /log info \"[WG-Monitor] WireGuard is RUNNING — applying rules\"\n    /ip dhcp-client set ether1 use-peer-dns=no\n    /ip dns cache flush\n    /ip firewall nat remove [find comment=\"Redirect to Router\"]\n    /ip firewall nat add action=redirect chain=dstnat src-address-list=\"RedirectDNS\" dst-port=53,5353,1253 protocol=udp comment=\"Redirect to Router\"\n    /ip dns set servers=172.29.8.1\n} else={\n    /log info \"[WG-Monitor] WireGuard is NOT running — reverting rules\"\n    /ip firewall nat remove [find comment=\"Redirect to Router\"]\n    /ip dns set servers=\"\"\n    /ip dhcp-client set ether1 use-peer-dns=yes\n    /ip dns cache flush\n}"
+add name=WG-Monitor source={
+:local iface "wg-vpn"
+:local isRunning [/interface get [find name="wg-vpn"] running]
+:global wgLastState
+
+:if ([:typeof $wgLastState] = "nothing" || $wgLastState != $isRunning) do={
+    :if ($isRunning) do={
+        /log info "[WG-Monitor] WireGuard is RUNNING, applying rules"
+        /ip dhcp-client set [find interface="ether1"] use-peer-dns=no
+        /ip dns cache flush
+        /ip firewall nat remove [find comment="Redirect to Router"]
+        /ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53,5353,1253 protocol=udp comment="Redirect to Router"
+        /ip dns set servers=172.29.8.1
+    } else={
+        /log info "[WG-Monitor] WireGuard is NOT running, reverting rules"
+        /ip firewall nat remove [find comment="Redirect to Router"]
+        /ip dns set servers=""
+        /ip dhcp-client set [find interface="ether1"] use-peer-dns=yes
+        /ip dns cache flush
+    }
+    :set wgLastState $isRunning
+}
+}
+
 ```
 
 **Что делает скрипт**:
@@ -341,6 +386,7 @@ add name="WG-Monitor" policy=read,write,test source=":local iface \"wg-vpn\"\n:l
 ```mikrotik
 /system scheduler
 add interval=10s name=checkWG on-event=":system script run WG-Monitor" policy=read,write,policy,test
+
 ```
 
 - **interval**: Период проверки (10 секунд).
