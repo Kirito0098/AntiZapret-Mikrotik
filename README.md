@@ -25,9 +25,9 @@
     - [5️⃣ Добавление маршрутов](#5️⃣-добавление-маршрутов)
     - [6️⃣ Перенаправление DNS-запросов](#6️⃣-перенаправление-dns-запросов)
     - [7️⃣ Скрипт автоматизации DNS и NAT](#7️⃣-скрипт-автоматизации-dns-и-nat)
-    - [8️⃣ Настройка планировщика](#8️⃣-настройка-планировщика)
-    - [9️⃣ Отключение FastTrack](#9️⃣-отключение-fasttrack)
-    - [🔟 Важно про MTU и TCPMSS](#-важно-про-mtu-и-tcpmss)
+    - [🧑‍💻 Автоматизация через Netwatch (WG-Monitor)](#-автоматизация-через-netwatch-wg-monitor)
+    - [8️⃣ Отключение FastTrack](#8️⃣-отключение-fasttrack)
+    - [9️⃣ Важно про MTU и TCPMSS](#9️⃣-важно-про-mtu-и-tcpmss)
       - [🐧 На сервере WireGuard (Linux):](#-на-сервере-wireguard-linux)
       - [🛡️ На MikroTik:](#️-на-mikrotik)
   - [➕ Добавление новых подсетей](#-добавление-новых-подсетей)
@@ -370,105 +370,72 @@ PersistentKeepalive = 15
 
 ### 7️⃣ Скрипт автоматизации DNS и NAT
 
-> **Проверьте, что параметры скрипта соответствуют вашей конфигурации!**
+### 🧑‍💻 Автоматизация через Netwatch (WG-Monitor)
 
 **Через WinBox**:
-1. В меню слева выберите **System** → **Scripts**.
-2. Нажмите **+** для создания скрипта.
-3. В открывшемся окне:
-   - **Name**: Введите `WG-Monitor`.
-   - **Policy**: Установите галочки `read`, `write`, `test`.
-   - **Source**: Вставьте код:
-    ```mikrotik
-    :local iface "wg-vpn"
-    :local isRunning [/interface get [find name="wg-vpn"] running]
-    :global wgLastState
 
-    :if ([:typeof $wgLastState] = "nothing" || $wgLastState != $isRunning) do={
-      :if ($isRunning) do={
-        /log info "[WG-Monitor] WireGuard is RUNNING, applying rules"
-        /ip dhcp-client set [find interface="ether1"] use-peer-dns=no
-        /ip dns cache flush
-        /ip firewall nat remove [find comment="Redirect to Router"]
-        /ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53,5353,1253 protocol=udp comment="Redirect to Router"
-        /ip dns set servers=172.29.8.1
-      } else={
-        /log info "[WG-Monitor] WireGuard is NOT running, reverting rules"
-        /ip firewall nat remove [find comment="Redirect to Router"]
-        /ip dns set servers=""
-        /ip dhcp-client set [find interface="ether1"] use-peer-dns=yes
-        /ip dns cache flush
-      }
-      :set wgLastState $isRunning
+1. В меню слева выберите **Tools → Netwatch**.
+2. Нажмите **+** для добавления нового мониторинга.
+3. В открывшемся окне:
+  - **🌐 Host**: Введите `172.29.8.1` (IP-адрес за WireGuard-туннелем).
+  - **⏱️ Interval**: Установите `00:00:15` (проверка каждые 15 секунд).
+  - **⌛ Timeout**: Установите `5.00` (ожидание ответа 5 секунд).
+  - **✅ Enabled**: Поставьте галочку, чтобы включить мониторинг.
+  - **🟢 Up Script**: Вставьте код:
+    ```mikrotik
+    /log info "[WG-Monitor] WireGuard is RUNNING — applying rules"
+    /ip dhcp-client set ether1 use-peer-dns=no
+    /ip dns cache flush
+    :if ([:len [/ip firewall nat find comment="Redirect to Router"]] > 0) do={
+      /ip firewall nat remove [find comment="Redirect to Router"]
     }
+    /ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53 protocol=udp comment="Redirect to Router"
+    /ip dns set servers=172.29.8.1
+    ```
+  - **🔴 Down Script**: Вставьте код:
+    ```mikrotik
+    /log info "[WG-Monitor] WireGuard is NOT running — reverting rules"
+    /ip firewall nat remove [find comment="Redirect to Router"]
+    /ip dns set servers=8.8.8.8
+    /ip dhcp-client set ether1 use-peer-dns=yes
+    /ip dns cache flush
     ```
 4. Нажмите **OK**.
 
-![Скриншот: Создание скрипта WG-Monitor в WinBox](https://github.com/user-attachments/assets/267bd173-0c2c-4cbc-b9ba-9ab9a3c14cba)
-
-**Через терминал**:
-```mikrotik
-/system script
-add name=WG-Monitor source={
-:local iface "wg-vpn"
-:local isRunning [/interface get [find name="wg-vpn"] running]
-:global wgLastState
-
-:if ([:typeof $wgLastState] = "nothing" || $wgLastState != $isRunning) do={
-    :if ($isRunning) do={
-        /log info "[WG-Monitor] WireGuard is RUNNING, applying rules"
-        /ip dhcp-client set [find interface="ether1"] use-peer-dns=no
-        /ip dns cache flush
-        /ip firewall nat remove [find comment="Redirect to Router"]
-        /ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53,5353,1253 protocol=udp comment="Redirect to Router"
-        /ip dns set servers=172.29.8.1
-    } else={
-        /log info "[WG-Monitor] WireGuard is NOT running, reverting rules"
-        /ip firewall nat remove [find comment="Redirect to Router"]
-        /ip dns set servers=""
-        /ip dhcp-client set [find interface="ether1"] use-peer-dns=yes
-        /ip dns cache flush
-    }
-    :set wgLastState $isRunning
-}
-}
-
-```
-
-**Что делает скрипт**:
-- Проверяет состояние WireGuard.
-- Если работает: перенаправляет DNS через VPN, отключает DNS провайдера.
-- Если не работает: возвращает стандартные настройки DNS.
+![Скриншот: Создание скрипта WG-Monitor в WinBox](https://github.com/user-attachments/assets/03d4da7c-0d3d-4613-bb94-31bad79e54ca)
 
 ---
 
-### 8️⃣ Настройка планировщика
-
-**Через WinBox**:
-1. В меню слева выберите **System** → **Scheduler**.
-2. Нажмите **+** для добавления расписания.
-3. В открывшемся окне:
-   - **Name**: Введите `checkWG`.
-   - **Interval**: Установите `00:00:10` (10 секунд).
-   - **On Event**: Введите `:system script run WG-Monitor`.
-   - **Policy**: Установите галочки `read`, `write`, `policy`, `test`.
-4. Нажмите **OK**.
-
-![Скриншот: Настройка планировщика в WinBox](https://github.com/user-attachments/assets/078b3f5f-662a-452f-9abc-76281444f126)
-
 **Через терминал**:
+
 ```mikrotik
-/system scheduler
-add interval=10s name=checkWG on-event=":system script run WG-Monitor" policy=read,write,policy,test
-
+/tool netwatch add host=172.29.8.1 \
+    interval=00:00:15 \
+    timeout=5s \
+    up-script=":log info \"[WG-Monitor] WireGuard is RUNNING — applying rules\"\n\
+               /ip dhcp-client set ether1 use-peer-dns=no\n\
+               /ip dns cache flush\n\
+               :if ([:len [/ip firewall nat find comment=\\\"Redirect to Router\\\"]] > 0) do={\n\
+                   /ip firewall nat remove [find comment=\\\"Redirect to Router\\\"]\n\
+               }\n\
+               /ip firewall nat add action=redirect chain=dstnat src-address-list=\\\"RedirectDNS\\\" dst-port=53 protocol=udp comment=\\\"Redirect to Router\\\"\n\
+               /ip dns set servers=172.29.8.1" \
+    down-script=":log info \"[WG-Monitor] WireGuard is NOT running — reverting rules\"\n\
+                 /ip firewall nat remove [find comment=\\\"Redirect to Router\\\"]\n\
+                 /ip dns set servers=8.8.8.8\n\
+                 /ip dhcp-client set ether1 use-peer-dns=yes\n\
+                 /ip dns cache flush"
 ```
-
-- **interval**: Период проверки (10 секунд).
-- **on-event**: Запуск скрипта `WG-Monitor`.
 
 ---
 
-### 9️⃣ Отключение FastTrack
+**🔎 Что делает WG-Monitor:**
+- 🟢 **WireGuard работает:** перенаправляет DNS через VPN, отключает DNS провайдера, обновляет NAT.
+- 🔴 **WireGuard не работает:** возвращает стандартные настройки DNS и NAT.
+
+---
+
+### 8️⃣ Отключение FastTrack
 
 **Через WinBox**:
 1. В меню слева выберите **IP** → **Firewall** → вкладка **Filter Rules**.
@@ -482,7 +449,7 @@ add interval=10s name=checkWG on-event=":system script run WG-Monitor" policy=re
 /ip firewall filter disable [find action=fasttrack-connection]
 ```
 ---
-### 🔟 Важно про MTU и TCPMSS
+### 9️⃣ Важно про MTU и TCPMSS
 
 > 🛑 **Если сайты открываются медленно, соединения обрываются или не работает TLS 1.3 — скорее всего, проблема в MTU или MSS!**  
 > ⚡ **Рекомендуется всегда использовать эти правила для WireGuard, но достаточно настроить только на одной стороне — сервере или MikroTik!**
