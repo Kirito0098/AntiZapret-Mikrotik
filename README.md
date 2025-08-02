@@ -19,13 +19,10 @@
     - [1️⃣ Создание интерфейса WireGuard](#1️⃣-создание-интерфейса-wireguard)
     - [2️⃣ Назначение IP-адреса интерфейсу](#2️⃣-назначение-ip-адреса-интерфейсу)
     - [3️⃣ Настройка подключения к серверу (peer)](#3️⃣-настройка-подключения-к-серверу-peer)
-      - [**Метод №1**](#метод-1)
-      - [**Метод №2**](#метод-2)
     - [4️⃣ Настройка NAT (маскарадинг)](#4️⃣-настройка-nat-маскарадинг)
-    - [5️⃣ Добавление маршрутов](#5️⃣-добавление-маршрутов)
-    - [6️⃣ Перенаправление DNS-запросов](#6️⃣-перенаправление-dns-запросов)
-    - [7️⃣ Скрипт автоматизации DNS и NAT](#7️⃣-скрипт-автоматизации-dns-и-nat)
-    - [🧑‍💻 Автоматизация через Netwatch (WG-Monitor)](#-автоматизация-через-netwatch-wg-monitor)
+    - [5️⃣ Перенаправление DNS-запросов](#5️⃣-перенаправление-dns-запросов)
+    - [6️⃣ Скрипт автоматизации DNS, NAT И Добавление маршрутов](#6️⃣-скрипт-автоматизации-dns-nat-и-добавление-маршрутов)
+    - [7️⃣ Настройка DHCP-клиента](#7️⃣-настройка-dhcp-клиента)
     - [8️⃣ Отключение FastTrack](#8️⃣-отключение-fasttrack)
     - [9️⃣ Важно про MTU и TCPMSS](#9️⃣-важно-про-mtu-и-tcpmss)
       - [🐧 На сервере WireGuard (Linux):](#-на-сервере-wireguard-linux)
@@ -71,10 +68,7 @@ DNS = 172.29.8.1
 PublicKey = ПУБЛИЧНЫЙ_КЛЮЧ_СЕРВЕРА
 PresharedKey = PRESHARED_КЛЮЧ_СЕРВЕРА
 Endpoint = vpn.example.com:51443
-AllowedIPs = 172.29.8.0/24,172.30.0.0/15,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/12,
-104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,
-188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,3.74.0.0/15,34.0.0.0/16,34.1.224.0/19,
-35.207.0.0/16,35.212.0.0/14,35.217.0.0/18,35.219.224.0/19,54.193.0.0/16,66.22.192.0/18
+AllowedIPs = 172.29.8.0/24, и так далее. 
 PersistentKeepalive = 15
 ```
 
@@ -151,49 +145,6 @@ PersistentKeepalive = 15
 
 > **Используйте свои ключи, endpoint, allowed-address и параметры из вашей конфигурации и свои сети!**
 
-**Если у вас много сетей, роутер может уйти в цикличную перезагрузку — используйте Метод №2**
-
-#### **Метод №1**
-
-**Через WinBox**:
-1. В меню слева выберите **Interfaces** → **WireGuard** → вкладка **Peers**.
-2. Нажмите **+** для добавления нового peer.
-3. В открывшемся окне:
-  - **Interface**: Выберите `wg-vpn`.
-  - **Public Key**: Вставьте `ПУБЛИЧНЫЙ_КЛЮЧ_СЕРВЕРА`.
-  - **Preshared Key**: Вставьте `PRESHARED_КЛЮЧ_СЕРВЕРА`.
-  - **Endpoint**: Введите `vpn.example.com`.
-  - **Endpoint Port**: Введите `51443`.
-  - **Allowed IPs**: Вставьте:
-    ```
-    172.29.8.0/24,172.30.0.0/15,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/12,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,3.74.0.0/15,34.0.0.0/16,34.1.224.0/19,35.207.0.0/16,35.212.0.0/14,35.217.0.0/18,35.219.224.0/19,54.193.0.0/16,66.22.192.0/18
-    ```
-  - **Persistent Keepalive**: Установите `15`.
-4. Нажмите **OK**.
-   
-![Скриншот: Настройка WireGuard Peer в WinBox](https://github.com/user-attachments/assets/c64ddee9-cf57-4990-bebe-3e92bb4cfc20)
-
-**Через терминал**:
-```mikrotik
-/interface wireguard peers add \
-   interface=wg-vpn \
-   public-key="ПУБЛИЧНЫЙ_КЛЮЧ_СЕРВЕРА" \
-   preshared-key="PRESHARED_КЛЮЧ_СЕРВЕРА" \
-   endpoint-address=vpn.example.com \
-   endpoint-port=51443 \
-   allowed-address=172.29.8.0/24,172.30.0.0/15,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/12,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,3.74.0.0/15,34.0.0.0/16,34.1.224.0/19,35.207.0.0/16,35.212.0.0/14,35.217.0.0/18,35.219.224.0/19,54.193.0.0/16,66.22.192.0/18 \
-   persistent-keepalive=15s
-```
-
-- **interface**: Интерфейс WireGuard.
-- **public-key**: Публичный ключ сервера.
-- **preshared-key**: Общий секрет.
-- **endpoint-address/port**: Адрес и порт сервера.
-- **allowed-address**: Сети, доступные через VPN.
-- **persistent-keepalive**: Поддержка соединения (15 секунд).
-
-#### **Метод №2**
-
 **Через WinBox**:
 1. В меню слева выберите **Interfaces** → **WireGuard** → вкладка **Peers**.
 2. Нажмите **+** для добавления нового peer.
@@ -225,7 +176,7 @@ PersistentKeepalive = 15
 - **public-key**: Публичный ключ сервера.
 - **preshared-key**: Общий секрет.
 - **endpoint-address/port**: Адрес и порт сервера.
-- **allowed-address**: Сети, доступные через VPN.
+- **allowed-address**: Сеть 0.0.0.0/0 укажим через файл ips.txt далее. 
 - **persistent-keepalive**: Поддержка соединения (30 секунд).
 
 
@@ -256,89 +207,7 @@ PersistentKeepalive = 15
 
 ---
 
-### 5️⃣ Добавление маршрутов
-
-> **Добавляйте маршруты только для своих сетей из вашей конфигурации!**
-
-**Через WinBox**:
-1. В меню слева выберите **IP** → **Routes**.
-2. Нажмите **+** для добавления маршрута.
-3. Для каждой подсети:
-   - **Dst. Address**: Введите подсеть (например, `172.29.8.0/24`).
-   - **Gateway**: Введите `172.29.8.1`.
-   - **Distance**: Установите `1`.
-   - **Check Gateway**: Выберите `ping`.
-4. Повторите для всех подсетей (Используйте ваши подсети):
-   Пример
-   ```
-   172.29.8.0/24
-   172.30.0.0/15
-   103.21.244.0/22
-   103.22.200.0/22
-   103.31.4.0/22
-   104.16.0.0/12
-   104.24.0.0/14
-   108.162.192.0/18
-   131.0.72.0/22
-   141.101.64.0/18
-   162.158.0.0/15
-   172.64.0.0/13
-   173.245.48.0/20
-   188.114.96.0/20
-   190.93.240.0/20
-   197.234.240.0/22
-   198.41.128.0/17
-   3.74.0.0/15
-   34.0.0.0/16
-   34.1.224.0/19
-   35.207.0.0/16
-   35.212.0.0/14
-   35.217.0.0/18
-   35.219.224.0/19
-   54.193.0.0/16
-   66.22.192.0/18
-   ```
-5. Нажмите **OK** для каждого маршрута.
- ![Скриншот: Добавление маршрутов в WinBox](https://github.com/user-attachments/assets/f45b238e-f961-45ed-a525-b825ac96f9eb)
-
-**Через терминал (Используйте ваши подсети)**:
-```mikrotik
-/ip route add dst-address=172.29.8.0/24 gateway=172.29.8.1 distance=1
-/ip route add dst-address=172.30.0.0/15 gateway=172.29.8.1 distance=1
-/ip route add dst-address=103.21.244.0/22 gateway=172.29.8.1 distance=1
-/ip route add dst-address=103.22.200.0/22 gateway=172.29.8.1 distance=1
-/ip route add dst-address=103.31.4.0/22 gateway=172.29.8.1 distance=1
-/ip route add dst-address=104.16.0.0/12 gateway=172.29.8.1 distance=1
-/ip route add dst-address=104.24.0.0/14 gateway=172.29.8.1 distance=1
-/ip route add dst-address=108.162.192.0/18 gateway=172.29.8.1 distance=1
-/ip route add dst-address=131.0.72.0/22 gateway=172.29.8.1 distance=1
-/ip route add dst-address=141.101.64.0/18 gateway=172.29.8.1 distance=1
-/ip route add dst-address=162.158.0.0/15 gateway=172.29.8.1 distance=1
-/ip route add dst-address=172.64.0.0/13 gateway=172.29.8.1 distance=1
-/ip route add dst-address=173.245.48.0/20 gateway=172.29.8.1 distance=1
-/ip route add dst-address=188.114.96.0/20 gateway=172.29.8.1 distance=1
-/ip route add dst-address=190.93.240.0/20 gateway=172.29.8.1 distance=1
-/ip route add dst-address=197.234.240.0/22 gateway=172.29.8.1 distance=1
-/ip route add dst-address=198.41.128.0/17 gateway=172.29.8.1 distance=1
-/ip route add dst-address=3.74.0.0/15 gateway=172.29.8.1 distance=1
-/ip route add dst-address=34.0.0.0/16 gateway=172.29.8.1 distance=1
-/ip route add dst-address=34.1.224.0/19 gateway=172.29.8.1 distance=1
-/ip route add dst-address=35.207.0.0/16 gateway=172.29.8.1 distance=1
-/ip route add dst-address=35.212.0.0/14 gateway=172.29.8.1 distance=1
-/ip route add dst-address=35.217.0.0/18 gateway=172.29.8.1 distance=1
-/ip route add dst-address=35.219.224.0/19 gateway=172.29.8.1 distance=1
-/ip route add dst-address=54.193.0.0/16 gateway=172.29.8.1 distance=1
-/ip route add dst-address=66.22.192.0/18 gateway=172.29.8.1 distance=1
-
-```
-
-- **dst-address**: Подсеть для маршрута.
-- **gateway**: Шлюз (`172.29.8.1`).
-- **check-gateway**: Проверка шлюза (`ping`).
-
----
-
-### 6️⃣ Перенаправление DNS-запросов
+### 5️⃣ Перенаправление DNS-запросов
 
 > **Используйте свои локальные сети и параметры!**
 
@@ -368,9 +237,14 @@ PersistentKeepalive = 15
 
 ---
 
-### 7️⃣ Скрипт автоматизации DNS и NAT
+### 6️⃣ Скрипт автоматизации DNS, NAT И Добавление маршрутов
 
-### 🧑‍💻 Автоматизация через Netwatch (WG-Monitor)
+> ⚠️ **Обязательный шаг!**  
+> Необходимо взять файл `/root/antizapret/result/ips.txt` с сервера AntiZapret и скопировать его в папку `files` на MikroTik.  
+> В третьей строке скрипта Up обязательно укажите свой шлюз — в зависимости от выбранной при установке AntiZapret подсети (`172.29.8.1` или `10.29.8.1`).
+
+
+**🧑‍💻 Автоматизация через Netwatch (WG-Monitor)**
 
 **Через WinBox**:
 
@@ -382,49 +256,102 @@ PersistentKeepalive = 15
   - **⌛ Timeout**: Установите `5.00` (ожидание ответа 5 секунд).
   - **✅ Enabled**: Поставьте галочку, чтобы включить мониторинг.
   - **🟢 Up Script**: Вставьте код:
-    ```mikrotik
-    /log info "[WG-Monitor] WireGuard is RUNNING — applying rules"
-    /ip dhcp-client set ether1 use-peer-dns=no
-    /ip dns cache flush
-    :if ([:len [/ip firewall nat find comment="Redirect to Router"]] > 0) do={
-      /ip firewall nat remove [find comment="Redirect to Router"]
+  
+```mikrotik
+/log info "[WG-Monitor] WireGuard is RUNNING — applying rules"
+:local routeFile "ips.txt"
+:local routeGateway "172.29.8.1"
+:local routeComment "wg-auto-route"
+/ip dns cache flush
+:if ([:len [/ip firewall nat find comment="Redirect to Router"]] > 0) do={
+  /ip firewall nat remove [find comment="Redirect to Router"]
+}
+/ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53 protocol=udp comment="Redirect to Router"
+/ip dns set servers=$routeGateway
+:local content [/file get $routeFile contents]
+:if ([:len $content] > 0) do={
+    :local line ""
+    :for i from=0 to=([:len $content] - 1) do={
+        :local char [:pick $content $i]
+        :if ($char != "\r" && $char != "\n") do={
+            :set line ($line . $char)
+        } else={
+            :if ([:len $line] > 5) do={
+                :do { /ip route add dst-address=$line gateway=$routeGateway distance=1 comment=$routeComment } on-error={}
+            }
+            :set line ""
+        }
     }
-    /ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53 protocol=udp comment="Redirect to Router"
-    /ip dns set servers=172.29.8.1
-    ```
-  - **🔴 Down Script**: Вставьте код:
-    ```mikrotik
-    /log info "[WG-Monitor] WireGuard is NOT running — reverting rules"
-    /ip firewall nat remove [find comment="Redirect to Router"]
-    /ip dns set servers=8.8.8.8
-    /ip dhcp-client set ether1 use-peer-dns=yes
-    /ip dns cache flush
-    ```
-4. Нажмите **OK**.
+    :if ([:len $line] > 5) do={
+         :do { /ip route add dst-address=$line gateway=$routeGateway distance=1 comment=$routeComment } on-error={}
+    }
+}
+:local dotPos [:find $routeGateway "."]
+:if ($dotPos != "") do={
+    :local firstOctet [:pick $routeGateway 0 $dotPos]
+    :local derivedDstAddress ($firstOctet . ".30.0.0/15")
+    :do { /ip route add dst-address=$derivedDstAddress gateway=$routeGateway distance=1 comment=$routeComment } on-error={}
+}
 
-![Скриншот: Создание скрипта WG-Monitor в WinBox](https://github.com/user-attachments/assets/03d4da7c-0d3d-4613-bb94-31bad79e54ca)
+```
+  - **🔴 Down Script**: Вставьте код:
+```mikrotik
+/log info "[WG-Monitor] WireGuard is NOT running — reverting rules"
+/ip firewall nat remove [find comment="Redirect to Router"]
+/ip dns set servers=8.8.8.8
+/ip dns cache flush
+/ip route remove [find comment="wg-auto-route"]
+
+```
+1. Нажмите **OK**.
+
+![Скриншот: Создание скрипта WG-Monitor в WinBox](https://github.com/user-attachments/assets/d598b9f6-e271-4580-83b2-48e97edad107)
 
 ---
 
 **Через терминал**:
 
 ```mikrotik
-/tool netwatch add host=172.29.8.1 \
-    interval=00:00:15 \
-    timeout=5s \
-    up-script=":log info \"[WG-Monitor] WireGuard is RUNNING — applying rules\"\n\
-               /ip dhcp-client set ether1 use-peer-dns=no\n\
-               /ip dns cache flush\n\
-               :if ([:len [/ip firewall nat find comment=\\\"Redirect to Router\\\"]] > 0) do={\n\
-                   /ip firewall nat remove [find comment=\\\"Redirect to Router\\\"]\n\
-               }\n\
-               /ip firewall nat add action=redirect chain=dstnat src-address-list=\\\"RedirectDNS\\\" dst-port=53 protocol=udp comment=\\\"Redirect to Router\\\"\n\
-               /ip dns set servers=172.29.8.1" \
-    down-script=":log info \"[WG-Monitor] WireGuard is NOT running — reverting rules\"\n\
-                 /ip firewall nat remove [find comment=\\\"Redirect to Router\\\"]\n\
-                 /ip dns set servers=8.8.8.8\n\
-                 /ip dhcp-client set ether1 use-peer-dns=yes\n\
-                 /ip dns cache flush"
+/tool netwatch add host=172.29.8.1 interval=15s timeout=5s disabled=no \
+up-script={:log info "[WG-Monitor] WireGuard is RUNNING — applying rules"; \
+:local routeFile "ips.txt"; \
+:local routeGateway "172.29.8.1"; \
+:local routeComment "wg-auto-route"; \
+/ip dns cache flush; \
+:if ([:len [/ip firewall nat find comment="Redirect to Router"]] > 0) do={ \
+  /ip firewall nat remove [find comment="Redirect to Router"]; \
+}; \
+/ip firewall nat add action=redirect chain=dstnat src-address-list="RedirectDNS" dst-port=53 protocol=udp comment="Redirect to Router"; \
+/ip dns set servers=\$routeGateway; \
+:local content [/file get \$routeFile contents]; \
+:if ([:len \$content] > 0) do={ \
+    :local line ""; \
+    :for i from=0 to=([:len \$content] - 1) do={ \
+        :local char [:pick \$content \$i]; \
+        :if (\$char != "\r" && \$char != "\n") do={ \
+            :set line (\$line . \$char); \
+        } else={ \
+            :if ([:len \$line] > 5) do={ \
+                :do { /ip route add dst-address=\$line gateway=\$routeGateway distance=1 comment=\$routeComment } on-error={}; \
+            }; \
+            :set line ""; \
+        }; \
+    }; \
+    :if ([:len \$line] > 5) do={ \
+         :do { /ip route add dst-address=\$line gateway=\$routeGateway distance=1 comment=\$routeComment } on-error={}; \
+    }; \
+}; \
+:local dotPos [:find \$routeGateway "."]; \
+:if (\$dotPos != "") do={ \
+    :local firstOctet [:pick \$routeGateway 0 \$dotPos]; \
+    :local derivedDstAddress (\$firstOctet . ".30.0.0/15"); \
+    :do { /ip route add dst-address=\$derivedDstAddress gateway=\$routeGateway distance=1 comment=\$routeComment } on-error={}; \
+}} \
+down-script={:log info "[WG-Monitor] WireGuard is NOT running — reverting rules"; \
+/ip firewall nat remove [find comment="Redirect to Router"]; \
+/ip dns set servers=8.8.8.8; \
+/ip dns cache flush; \
+/ip route remove [find comment="wg-auto-route"]}
 ```
 
 ---
@@ -432,6 +359,31 @@ PersistentKeepalive = 15
 **🔎 Что делает WG-Monitor:**
 - 🟢 **WireGuard работает:** перенаправляет DNS через VPN, отключает DNS провайдера, обновляет NAT.
 - 🔴 **WireGuard не работает:** возвращает стандартные настройки DNS и NAT.
+
+---
+### 7️⃣ Настройка DHCP-клиента
+
+DHCP-клиент на основном интерфейсе (например, ether1) позволяет роутеру получать IP-адрес и другие параметры от провайдера.
+
+- **WinBox**:  
+  Перейдите в **IP → DHCP Client → Add (+)**.  
+  Выберите интерфейс (например, ether1), уберите галочку "Use Peer DNS", поставьте галочку "Add Default Route".
+- **Терминал**:
+  ```bash
+  /ip dhcp-client add interface=ether1 use-peer-dns=no add-default-route=yes
+  ```
+
+> - `use-peer-dns=no` — отключает получение DNS от провайдера, чтобы использовать свои настройки
+> - `add-default-route=yes` — добавляет маршрут по умолчанию для выхода в интернет
+
+> **Проверьте, что интерфейс ether1 подключён к интернету и получает IP-адрес.**
+
+---
+
+**💡 Пример: DHCP Client Add**
+
+![DHCP Client Add](https://github.com/Kirito0098/AntiZapret-OpenVPN-Mikrotik/raw/main/screenshot/WinBox_WfS4CCVDPU.png)
+*IP → DHCP Client → Add*
 
 ---
 
